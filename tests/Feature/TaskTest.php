@@ -117,3 +117,47 @@ it('returns 404 if task not found', function () {
             'message' => 'Task Not Found',
         ]);
 });
+
+it('updates a task successfully', function () {
+    $task = Task::factory()->create();
+
+    $updatedData = [
+        'title' => 'Updated Task',
+        'description' => 'Updated description',
+        'completed' => 1,
+    ];
+
+    $response = $this->putJson("/api/tasks/{$task->id}", $updatedData);
+
+    $response->assertStatus(200)
+        ->assertJson([
+            'message' => 'Task Updated Sucessfully',
+            'data' => [
+                'id' => $task->id,
+                'title' => 'Updated Task',
+                'description' => 'Updated description',
+                'completed' => 1,
+            ],
+        ]);
+
+    $this->assertDatabaseHas('tasks', $updatedData);
+});
+
+it('handles exception during task update', function () {
+    $task = Task::factory()->create();
+
+    $updatedData = [
+        'title' => 'Updated Task',
+        'description' => 'Updated description',
+        'completed' => 1,
+    ];
+
+    Validator::shouldReceive('make')->andThrow(new \Exception('Database error'));
+
+    $response = $this->putJson("/api/tasks/{$task->id}", $updatedData);
+
+    $response->assertStatus(500)
+        ->assertJson([
+            'message' => 'Database error',
+        ]);
+});
