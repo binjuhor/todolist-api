@@ -143,6 +143,43 @@ it('updates a task successfully', function () {
     $this->assertDatabaseHas('tasks', $updatedData);
 });
 
+it('returns validation error for update invalid data', function () {
+    $task = Task::factory()->create();
+
+    $invalidData = [
+        'title' => 'No',
+        'description' => '',
+        'completed' => 2,
+    ];
+
+    $response = $this->putJson("/api/tasks/{$task->id}", $invalidData);
+
+    $response->assertStatus(500)
+        ->assertJson([
+            'message' => 'The given data was invalid.',
+            'errors' => [
+                'title' => ['The title field must be at least 3 characters.'],
+                'description' => ['The description field is required.'],
+                'completed' => ['The selected completed is invalid.'],
+            ],
+        ]);
+});
+
+it('returns 404 if updated task not found', function () {
+    $updatedData = [
+        'title' => 'Updated Task',
+        'description' => 'Updated description',
+        'completed' => 1,
+    ];
+
+    $response = $this->putJson('/api/tasks/999', $updatedData);
+
+    $response->assertStatus(404)
+        ->assertJson([
+            'message' => 'Task Not Found',
+        ]);
+});
+
 it('handles exception during task update', function () {
     $task = Task::factory()->create();
 
@@ -160,4 +197,26 @@ it('handles exception during task update', function () {
         ->assertJson([
             'message' => 'Database error',
         ]);
+});
+
+it('returns 404 if task delete not found', function () {
+    $response = $this->deleteJson('/api/tasks/999');
+
+    $response->assertStatus(404)
+        ->assertJson([
+            'message' => 'Task Not Found',
+        ]);
+});
+
+it('deletes a task successfully', function () {
+    $task = Task::factory()->create();
+
+    $response = $this->deleteJson("/api/tasks/{$task->id}");
+
+    $response->assertStatus(200)
+        ->assertJson([
+            'message' => 'Task Deleted Sucessfully',
+        ]);
+
+    $this->assertDatabaseMissing('tasks', ['id' => $task->id]);
 });
