@@ -58,7 +58,18 @@ class TaskController extends Controller
 
     public function show(string $id)
     {
-        // show detail
+        $task = Task::find($id);
+
+        if ($task == null) {
+            return response()->json([
+                'message' => 'Task Not Found',
+            ], 404);
+        } else {
+            return response()->json([
+                'message' => 'Task Retrieved Successfully',
+                'data' => new TaskResource($task)
+            ]);
+        }
     }
 
     public function update(Request $request, string $id)

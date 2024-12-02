@@ -90,3 +90,30 @@ it('handles exception during task creation', function () {
             'message' => 'Database error',
         ]);
 });
+
+it('retrieves a task successfully', function () {
+    $task = Task::factory()->create();
+
+    $response = $this->getJson("/api/tasks/{$task->id}");
+
+    $response->assertStatus(200)
+        ->assertJson([
+            'message' => 'Task Retrieved Successfully',
+            'data' => [
+                'id' => $task->id,
+                'title' => $task->title,
+                'description' => $task->description,
+                'created_at' => $task->created_at->toJSON(),
+                'updated_at' => $task->updated_at->toJSON(),
+            ],
+        ]);
+});
+
+it('returns 404 if task not found', function () {
+    $response = $this->getJson('/api/tasks/999');
+
+    $response->assertStatus(404)
+        ->assertJson([
+            'message' => 'Task Not Found',
+        ]);
+});
