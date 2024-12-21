@@ -29,6 +29,7 @@ jobs:
           rsync -avz -e "ssh -o StrictHostKeyChecking=no" \
           --exclude .env --exclude .env.example --exclude .git --exclude .github \
           --exclude vendor --exclude node_modules --exclude tests --exclude storage \
+          --exclude .gitattributes --exclude .gitignore --exclude README.md --exclude .env.testing \
           $GITHUB_WORKSPACE/ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.WORK_DIR }}/
           echo "Code deployment completed."
 
