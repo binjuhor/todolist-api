@@ -9,21 +9,43 @@ on:
 
 jobs:
   deploy:
-    if: github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
-      - uses: actions/checkout@v3
-      - name: Deploy to Server
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_KEY }}
-          script: |
-            rsync -avz -e "ssh -o StrictHostKeyChecking=no" \
-            --exclude .env --exclude .env.example --exclude .git --exclude .github \
-            --exclude vendor --exclude node_modules --exclude tests --exclude storage \
-            $GITHUB_WORKSPACE ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.SSH_PATH }}/
-            ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cd ${{ secrets.SSH_PATH }} && composer install"
-            ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cd ${{ secrets.SSH_PATH }} && php artisan migrate --force" 
-            ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cd ${{ secrets.SSH_PATH }} && php artisan optimize:clear"
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up SSH key and known hosts
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy code using rsync
+        run: |
+          echo "Starting rsync deployment..."
+          rsync -avz -e "ssh -o StrictHostKeyChecking=no" \
+          --exclude .env --exclude .env.example --exclude .git --exclude .github \
+          --exclude vendor --exclude node_modules --exclude tests --exclude storage \
+          $GITHUB_WORKSPACE/ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.SSH_PATH }}/
+          echo "Code deployment completed."
+
+      - name: Install dependencies on server
+        run: |
+          echo "Installing dependencies..."
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cd ${{ secrets.SSH_PATH }} && composer install"
+          echo "Dependencies installed."
+
+      - name: Run database migrations
+        run: |
+          echo "Running database migrations..."
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cd ${{ secrets.SSH_PATH }} && php artisan migrate --force"
+          echo "Database migrations completed."
+
+      - name: Optimize Laravel application
+        run: |
+          echo "Clearing and optimizing application cache..."
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cd ${{ secrets.SSH_PATH }} && php artisan optimize:clear"
+          echo "Application optimized."
