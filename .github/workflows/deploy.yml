@@ -1,4 +1,4 @@
-name: Deploy to vDevServer
+name: Deploy
 
 on:
   workflow_run:
@@ -8,17 +8,22 @@ on:
   workflow_dispatch:
 
 jobs:
-  run_pull:
-    name: run pull
+  deploy:
+    if: github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
-    
+
     steps:
-      - name: install ssh keys
-        run: |
-          install -m 600 -D /dev/null ~/.ssh/id_rsa
-          echo "${{ secrets.PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.SSH_HOST }} > ~/.ssh/known_hosts
-      - name: connect and pull
-        run: ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cd ${{ secrets.WORK_DIR }} && git checkout ${{ secrets.MAIN_BRANCH }} && git pull && exit"
-      - name: cleanup
-        run: rm -rf ~/.ssh
+      - uses: actions/checkout@v3
+      - name: Deploy to Server
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            rsync -avz -e "ssh -o StrictHostKeyChecking=no" \
+            --exclude .env --exclude .env.example --exclude .git --exclude .github \
+            --exclude vendor --exclude node_modules --exclude tests --exclude storage \
+            $GITHUB_WORKSPACE ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.SSH_PATH }}/
+            ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cd ${{ secrets.SSH_PATH }} && composer install"
+            ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cd ${{ secrets.SSH_PATH }} && php artisan migrate --force" 
+            ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cd ${{ secrets.SSH_PATH }} && php artisan optimize:clear"
