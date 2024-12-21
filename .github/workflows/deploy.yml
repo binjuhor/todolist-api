@@ -29,23 +29,23 @@ jobs:
           rsync -avz -e "ssh -o StrictHostKeyChecking=no" \
           --exclude .env --exclude .env.example --exclude .git --exclude .github \
           --exclude vendor --exclude node_modules --exclude tests --exclude storage \
-          $GITHUB_WORKSPACE/ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.SSH_PATH }}/
+          $GITHUB_WORKSPACE/ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.WORK_DIR }}/
           echo "Code deployment completed."
 
       - name: Install dependencies on server
         run: |
           echo "Installing dependencies..."
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cd ${{ secrets.SSH_PATH }} && composer install"
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cd ${{ secrets.WORK_DIR }} && composer install"
           echo "Dependencies installed."
 
       - name: Run database migrations
         run: |
           echo "Running database migrations..."
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cd ${{ secrets.SSH_PATH }} && php artisan migrate --force"
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cd ${{ secrets.WORK_DIR }} && php artisan migrate --force"
           echo "Database migrations completed."
 
       - name: Optimize Laravel application
         run: |
           echo "Clearing and optimizing application cache..."
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cd ${{ secrets.SSH_PATH }} && php artisan optimize:clear"
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cd ${{ secrets.WORK_DIR }} && php artisan optimize:clear"
           echo "Application optimized."
